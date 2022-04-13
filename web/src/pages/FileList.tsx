@@ -1,6 +1,7 @@
 import {
     Breadcrumbs,
     Divider,
+    Fab, IconButton,
     Link,
     Paper,
     Stack,
@@ -10,10 +11,13 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Typography
+    Typography,
+    Menu, MenuItem
 } from "@mui/material";
 
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import AddIcon from '@mui/icons-material/Add';
+import MoreButton from '../components/MoreButton';
 
 function createData(
     name: string,
@@ -49,6 +53,10 @@ function FileList() {
                 </Link>
                 <Typography color="text.primary">Breadcrumbs</Typography>
             </Breadcrumbs>
+            <Fab color="primary" variant="extended" aria-label="add">
+                <AddIcon/>
+                Upload
+            </Fab>
 
             <TableContainer component={Paper}>
                 <Table size="small">
@@ -58,7 +66,7 @@ function FileList() {
                             <TableCell>Name</TableCell>
                             <TableCell align="right">Size</TableCell>
                             <TableCell align="right">Modify Time</TableCell>
-                            <TableCell align="right">Action</TableCell>
+                            <TableCell align="right"></TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -77,7 +85,9 @@ function FileList() {
                                 </TableCell>
                                 <TableCell align="right">{row.calories}</TableCell>
                                 <TableCell align="right">{row.fat}</TableCell>
-                                <TableCell align="right">{row.carbs}</TableCell>
+                                <TableCell align="right">
+                                    <MoreButton/>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

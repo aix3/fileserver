@@ -32,10 +32,15 @@ func main() {
 	flag.Parse()
 
 	mux := http.NewServeMux()
-	mux.Handle("/", newFsHandler(defaultConfig.basedir))
 
-	//sub, _ := fs.Sub(content, "dist")
-	//r.PathPrefix("/").Handler(http.FileServer(http.FS(sub)))
+	fs := &fsHandler{
+		basedir: defaultConfig.basedir,
+	}
+	ui := &uiHandler{
+		fs: fs,
+	}
+
+	mux.Handle("/", newCompHandler(fs, ui))
 
 	addr := fmt.Sprintf(":%d", defaultConfig.port)
 
