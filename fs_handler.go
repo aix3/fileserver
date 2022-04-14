@@ -90,7 +90,7 @@ func (h *fsHandler) readDir(target string) ([]fileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	infos := make([]fileInfo, len(entries))
+	infos := make([]fileInfo, 0, len(entries))
 	for _, entry := range entries {
 		info, err := entry.Info()
 		if err != nil {
@@ -108,7 +108,7 @@ func (h *fsHandler) readDir(target string) ([]fileInfo, error) {
 }
 
 func (h *fsHandler) stat(path string) (io.ReadSeeker, fs.FileInfo, error) {
-	f, err := http.FS(os.DirFS(h.basedir)).Open(path)
+	f, err := http.FS(os.DirFS(h.basedir)).Open(filepath.Clean(path))
 	if err != nil {
 		return nil, nil, err
 	}

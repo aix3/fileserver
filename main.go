@@ -40,7 +40,7 @@ func main() {
 		fs: fs,
 	}
 
-	mux.Handle("/", newCompHandler(fs, ui))
+	mux.Handle("/", newCompHandler(ui, fs))
 
 	addr := fmt.Sprintf(":%d", defaultConfig.port)
 

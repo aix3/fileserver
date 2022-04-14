@@ -4,8 +4,11 @@ import (
 	"embed"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"text/template"
 )
@@ -24,6 +27,9 @@ func init() {
 	asset = http.FileServer(http.FS(dist))
 
 	index = template.Must(template.ParseFS(dist, "index.html"))
+	for _, t := range index.Templates() {
+		fmt.Println(t.Name())
+	}
 }
 
 type uiHandler struct {
@@ -31,11 +37,13 @@ type uiHandler struct {
 }
 
 func (h *uiHandler) accept(r *http.Request) bool {
-	if strings.HasPrefix(r.URL.Path, "/_asset/") {
+	log.Println(r.URL.Path)
+	if strings.HasPrefix(r.URL.Path, "/_ui/") {
 		return true
 	}
-	accepts := r.Header.Get("accept")
+	accepts := r.Header.Get("Accept")
 	for _, a := range strings.Split(accepts, ",") {
+		log.Println(a)
 		if a == "text/html" {
 			return true
 		}
@@ -49,7 +57,7 @@ func (h *uiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.HasPrefix(r.URL.Path, "/_asset/") {
+	if strings.HasPrefix(r.URL.Path, "/_ui/") {
 		asset.ServeHTTP(w, r)
 		return
 	}
@@ -71,11 +79,24 @@ func (h *uiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sort.Slice(infos, func(i, j int) bool {
+		a, b := infos[i], infos[j]
+		if a.IsDir && !b.IsDir {
+			return true
+		}
+		if !a.IsDir && b.IsDir {
+			return false
+		}
+		return a.Name < b.Name
+	})
+
 	bytes, _ := json.Marshal(infos)
 
 	w.Header().Set("Content-Type", "text/html")
 
-	err = index.ExecuteTemplate(w, "index.html", string(bytes))
+	log.Println("cccccccccccccccc")
+
+	err = index.Execute(w, string(bytes))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
