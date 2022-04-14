@@ -1,7 +1,7 @@
 import {
     Breadcrumbs,
     Divider,
-    Fab, IconButton,
+    Fab,
     Link,
     Paper,
     Stack,
@@ -11,31 +11,59 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Typography,
-    Menu, MenuItem
+    Typography
 } from "@mui/material";
 
-import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import FolderRoundedIcon from '@mui/icons-material/FolderRounded';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
+import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
 import AddIcon from '@mui/icons-material/Add';
 import MoreButton from '../components/MoreButton';
 
-function createData(
-    name: string,
-    calories: number,
-    fat: number,
-    carbs: number,
-    protein: number,
-) {
-    return {name, calories, fat, carbs, protein};
+/**
+ * Format bytes as human-readable text.
+ *
+ * @param bytes Number of bytes.
+ * @param si True to use metric (SI) units, aka powers of 1000. False to use
+ *           binary (IEC), aka powers of 1024.
+ * @param dp Number of decimal places to display.
+ *
+ * @return Formatted string.
+ */
+function humanFileSize(bytes: number, si= false, dp=1) {
+    const thresh = si ? 1000 : 1024;
+
+    if (Math.abs(bytes) < thresh) {
+        return bytes + ' B';
+    }
+    const units = si
+        ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+        : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+    let u = -1;
+    const r = 10**dp;
+
+    do {
+        bytes /= thresh;
+        ++u;
+    } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+    return bytes.toFixed(dp) + ' ' + units[u];
 }
 
-const rows = [
-    createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-    createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-    createData('Eclair', 262, 16.0, 24, 6.0),
-    createData('Cupcake', 305, 3.7, 67, 4.3),
-    createData('Gingerbread', 356, 16.0, 49, 3.9),
-];
+class Row {
+    name: string;
+    size: number;
+    mod_time: string;
+    is_dir: boolean;
+
+    constructor(name: string, size: number, mod_time: string, is_dir: boolean) {
+        this.name = name
+        this.size = size
+        this.mod_time = mod_time
+        this.is_dir = is_dir
+    }
+}
+
+const rows = window.data as Row[]
 
 function FileList() {
     return (
@@ -65,7 +93,7 @@ function FileList() {
                             <TableCell></TableCell>
                             <TableCell>Name</TableCell>
                             <TableCell align="right">Size</TableCell>
-                            <TableCell align="right">Modify Time</TableCell>
+                            <TableCell >Modify Time</TableCell>
                             <TableCell align="right"></TableCell>
                         </TableRow>
                     </TableHead>
@@ -76,15 +104,15 @@ function FileList() {
                                 sx={{'&:last-child td, &:last-child th': {border: 0}}}
                             >
                                 <TableCell align="right" width="10">
-                                    <FolderOpenIcon/>
+                                    { row.is_dir ? <FolderRoundedIcon/> : <InsertDriveFileOutlinedIcon/> }
                                 </TableCell>
                                 <TableCell>
-                                    <Link href="#" underline="hover">
+                                    <Link href={`${window.location.pathname + (row.is_dir ? row.name+'/' : row.name)}`} underline="hover">
                                         {row.name}
                                     </Link>
                                 </TableCell>
-                                <TableCell align="right">{row.calories}</TableCell>
-                                <TableCell align="right">{row.fat}</TableCell>
+                                <TableCell align="right">{`${humanFileSize(row.size)}`}</TableCell>
+                                <TableCell>{row.mod_time}</TableCell>
                                 <TableCell align="right">
                                     <MoreButton/>
                                 </TableCell>

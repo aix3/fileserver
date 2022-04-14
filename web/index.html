@@ -5,7 +5,8 @@
     <link rel="icon" type="image/svg+xml" href="/src/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>file server</title>
-    <script>let data = JSON.parse(`{{ . }}`); console.debug(data)</script>
+    <script>window.data = JSON.parse(`{{ . }}`); console.debug(data)</script>
+<!--    <script>window.data = JSON.parse(`[{"name":".git","size":480,"mod_time":"2022-04-13T21:30:51.644091847+08:00","is_dir":true},{"name":".gitignore","size":28,"mod_time":"2022-04-11T09:52:58.304497616+08:00","is_dir":false},{"name":".idea","size":256,"mod_time":"2022-04-14T19:50:48.849483572+08:00","is_dir":true},{"name":"README.md","size":106,"mod_time":"2022-03-23T23:14:39.020132417+08:00","is_dir":false},{"name":"comp_handler.go","size":609,"mod_time":"2022-04-13T20:34:58.104164289+08:00","is_dir":false},{"name":"fileserver","size":8971488,"mod_time":"2022-04-14T19:56:58.344302783+08:00","is_dir":false},{"name":"fs_handler.go","size":4194,"mod_time":"2022-04-14T19:56:56.757791045+08:00","is_dir":false},{"name":"fs_handler_test.go","size":2420,"mod_time":"2022-04-12T23:28:06.727031164+08:00","is_dir":false},{"name":"go.mod","size":43,"mod_time":"2022-03-23T23:06:29.99944676+08:00","is_dir":false},{"name":"go.sum","size":0,"mod_time":"2022-03-23T23:06:29.999100325+08:00","is_dir":false},{"name":"handler.go","size":101,"mod_time":"2022-04-13T20:34:58.11108945+08:00","is_dir":false},{"name":"main.go","size":1263,"mod_time":"2022-04-14T19:44:24.688227952+08:00","is_dir":false},{"name":"testdata","size":128,"mod_time":"2022-03-23T19:06:22.71361737+08:00","is_dir":true},{"name":"ui_handler.go","size":1587,"mod_time":"2022-04-14T19:46:47.212820545+08:00","is_dir":false},{"name":"web","size":352,"mod_time":"2022-04-14T19:50:48.469633754+08:00","is_dir":true}]`); console.debug(data)</script>-->
   </head>
   <body>
     <div id="root"></div>

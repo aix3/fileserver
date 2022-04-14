@@ -10,7 +10,7 @@ import FileList from "./pages/FileList"
 
 function App() {
     return (
-        <Container maxWidth="lg" sx={{marginTop: '20px'}}>
+        <Container maxWidth="lg" sx={{marginTop: '20px', marginBottom: '20px'}}>
             <FileList/>
         </Container>
     )
