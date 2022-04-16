@@ -13,14 +13,14 @@ import (
 	"text/template"
 )
 
-//go:embed web/dist/*
+//go:embed dist/*
 var content embed.FS
 
 var asset http.Handler
 var index *template.Template
 
 func init() {
-	dist, err := fs.Sub(content, "web/dist")
+	dist, err := fs.Sub(content, "dist")
 	if err != nil {
 		panic(err)
 	}
@@ -49,6 +49,11 @@ func (h *uiHandler) accept(r *http.Request) bool {
 		}
 	}
 	return false
+}
+
+type uiData struct {
+	Files []fileInfo `json:"files"`
+	Path  string     `json:"path"`
 }
 
 func (h *uiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -90,11 +95,14 @@ func (h *uiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return a.Name < b.Name
 	})
 
-	bytes, _ := json.Marshal(infos)
+	data := uiData{
+		Files: infos,
+		Path:  r.URL.Path,
+	}
+
+	bytes, _ := json.Marshal(data)
 
 	w.Header().Set("Content-Type", "text/html")
-
-	log.Println("cccccccccccccccc")
 
 	err = index.Execute(w, string(bytes))
 	if err != nil {

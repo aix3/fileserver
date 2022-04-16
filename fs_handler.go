@@ -65,6 +65,18 @@ type fileInfo struct {
 	IsDir   bool      `json:"is_dir"`
 }
 
+func (fi fileInfo) MarshalJSON() ([]byte, error) {
+	type alias fileInfo
+	tmp := struct {
+		alias
+		ModTime string `json:"mod_time"`
+	}{
+		alias: (alias)(fi),
+		ModTime:  fi.ModTime.Format(time.RFC3339),
+	}
+	return json.Marshal(tmp)
+}
+
 func (h *fsHandler) serveGet(w http.ResponseWriter, r *http.Request) (int, error) {
 	target := r.URL.Path
 	file, info, err := h.stat(target)
@@ -107,8 +119,8 @@ func (h *fsHandler) readDir(target string) ([]fileInfo, error) {
 	return infos, nil
 }
 
-func (h *fsHandler) stat(path string) (io.ReadSeeker, fs.FileInfo, error) {
-	f, err := http.FS(os.DirFS(h.basedir)).Open(filepath.Clean(path))
+func (h *fsHandler) stat(target string) (io.ReadSeeker, fs.FileInfo, error) {
+	f, err := http.FS(os.DirFS(h.basedir)).Open(path.Clean(target))
 	if err != nil {
 		return nil, nil, err
 	}
