@@ -1,16 +1,15 @@
-import * as React from 'react';
 import CircularProgress, {CircularProgressProps,} from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
-
 
 export default function ProgressWithLabel(
     props: CircularProgressProps & { valueFn: () => number },
 ) {
     return (
         <Box sx={{position: 'relative', display: 'inline-flex'}}>
-            <CircularProgress color="primary" variant="determinate" size={"1.5rem"} value={props.valueFn()} {...props} />
+            <CircularProgress color="primary" variant="determinate" size={"1.5rem"}
+                              value={props.valueFn()} {...props} />
             <Typography
                 sx={{
                     right: 5,
@@ -27,7 +26,7 @@ export default function ProgressWithLabel(
                 component="div"
             >
 
-                { props.valueFn() == 100 ? <CheckCircleOutlinedIcon color="success"/> : `${Math.round(props.valueFn())}` }
+                {props.valueFn() == 100 ? <CheckCircleOutlinedIcon color="success"/> : `${Math.round(props.valueFn())}`}
             </Typography>
         </Box>
     );
