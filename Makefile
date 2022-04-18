@@ -1,10 +1,10 @@
-build_web:
-	@yarn && yarn build
+build-web:
+	@yarn && yarn build web
 
-build_server:
+build-server:
 	@go build -o ./tmp/fileserver .
 
-build: build_web build_server
+build: build-web build-server
 
 dev:
 	go install github.com/cosmtrek/air@latest

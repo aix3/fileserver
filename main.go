@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/aix3/fileserver/server"
 	"net/http"
 	"runtime/debug"
 )
@@ -37,14 +38,14 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	fs := &fsHandler{
-		basedir: defaultConfig.basedir,
+	fs := &server.FSHandler{
+		Basedir: defaultConfig.basedir,
 	}
-	ui := &uiHandler{
-		fs: fs,
+	ui := &server.UIHandler{
+		Fs: fs,
 	}
 
-	mux.Handle("/", newCompHandler(ui, fs))
+	mux.Handle("/", server.NewCompHandler(ui, fs))
 
 	addr := fmt.Sprintf(":%d", defaultConfig.port)
 

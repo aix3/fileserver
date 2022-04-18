@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -10,8 +10,8 @@ import (
 )
 
 func Test_fsHandler_serveGetFile(t *testing.T) {
-	h := fsHandler{
-		basedir: "testdata",
+	h := FSHandler{
+		Basedir: "testdata",
 	}
 
 	r := httptest.NewRequest(http.MethodGet, "http://localhost/a.txt", nil)
@@ -31,8 +31,8 @@ func Test_fsHandler_serveGetFile(t *testing.T) {
 }
 
 func Test_fsHandler_serveGetFile_Head(t *testing.T) {
-	h := fsHandler{
-		basedir: "testdata",
+	h := FSHandler{
+		Basedir: "testdata",
 	}
 
 	r := httptest.NewRequest(http.MethodHead, "http://localhost/a.txt", nil)
@@ -53,8 +53,8 @@ func Test_fsHandler_serveGetFile_Head(t *testing.T) {
 
 
 func Test_fsHandler_serveCreateFile(t *testing.T) {
-	h := fsHandler{
-		basedir: "testdata",
+	h := FSHandler{
+		Basedir: "testdata",
 	}
 
 	var b bytes.Buffer
@@ -81,8 +81,8 @@ func Test_fsHandler_serveCreateFile(t *testing.T) {
 }
 
 func Test_fsHandler_serveCreateFile_Dir(t *testing.T) {
-	h := fsHandler{
-		basedir: "testdata",
+	h := FSHandler{
+		Basedir: "testdata",
 	}
 
 	var b bytes.Buffer

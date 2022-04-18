@@ -1,11 +1,11 @@
 {
   "name": "fileserver",
-  "version": "5.0.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite preview"
+    "dev": "vite web",
+    "build": "vite build web",
+    "serve": "vite preview web"
   },
   "dependencies": {
     "@emotion/react": "^11.9.0",

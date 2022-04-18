@@ -1,29 +1,21 @@
-package main
+package server
 
 import (
-	"embed"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io/fs"
-	"log"
+	"github.com/aix3/fileserver/web"
 	"net/http"
 	"sort"
 	"strings"
 	"text/template"
 )
 
-//go:embed dist/*
-var content embed.FS
-
 var asset http.Handler
 var index *template.Template
 
 func init() {
-	dist, err := fs.Sub(content, "dist")
-	if err != nil {
-		panic(err)
-	}
+	dist := web.Dist()
 	asset = http.FileServer(http.FS(dist))
 
 	index = template.Must(template.ParseFS(dist, "index.html"))
@@ -32,18 +24,16 @@ func init() {
 	}
 }
 
-type uiHandler struct {
-	fs *fsHandler
+type UIHandler struct {
+	Fs *FSHandler
 }
 
-func (h *uiHandler) accept(r *http.Request) bool {
-	log.Println(r.URL.Path)
+func (h *UIHandler) accept(r *http.Request) bool {
 	if strings.HasPrefix(r.URL.Path, "/_ui/") {
 		return true
 	}
 	accepts := r.Header.Get("Accept")
 	for _, a := range strings.Split(accepts, ",") {
-		log.Println(a)
 		if a == "text/html" {
 			return true
 		}
@@ -56,9 +46,9 @@ type uiData struct {
 	Path  string     `json:"path"`
 }
 
-func (h *uiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *UIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		h.fs.ServeHTTP(w, r)
+		h.Fs.ServeHTTP(w, r)
 		return
 	}
 
@@ -67,18 +57,18 @@ func (h *uiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, info, err := h.fs.stat(r.URL.Path)
+	_, info, err := h.Fs.stat(r.URL.Path)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if !info.IsDir() {
-		h.fs.ServeHTTP(w, r)
+		h.Fs.ServeHTTP(w, r)
 		return
 	}
 
-	infos, err := h.fs.readDir(r.URL.Path)
+	infos, err := h.Fs.readDir(r.URL.Path)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
