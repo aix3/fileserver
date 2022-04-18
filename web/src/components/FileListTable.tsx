@@ -11,7 +11,7 @@ import Typography from "@mui/material/Typography";
 
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
-import {humanFileSize} from "../utils/utils";
+import {humanFileSize} from "../utils/humanize";
 import MoreButton from "./MoreButton";
 import {useState} from "react";
 

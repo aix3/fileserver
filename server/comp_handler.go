@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ type compHandler struct {
 	handlers []handler
 }
 
-func newCompHandler(handlers ...handler) handler {
+func NewCompHandler(handlers ...handler) handler {
 	return &compHandler{
 		handlers: handlers,
 	}

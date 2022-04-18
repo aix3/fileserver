@@ -55,7 +55,6 @@ export default function UploaderDialog(props: UploaderDialogProps) {
         })
     }
 
-    const [a, setA] = useState(1)
     const [closeDisabled, setCloseDisabled] = useState(true)
 
     const uploadFiles = function (files: File[]) {
@@ -64,8 +63,6 @@ export default function UploaderDialog(props: UploaderDialogProps) {
             progressMap.forEach(value => {
                 done &&= (value == 100 || value == -1)
             })
-
-            setA(a + 1)
 
             if (done) {
                 clearInterval(interval)

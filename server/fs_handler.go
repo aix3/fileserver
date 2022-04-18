@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/json"
@@ -19,20 +19,20 @@ const (
 	defaultMaxMemory = 32 << 20 // 32 MB
 )
 
-type fsHandler struct {
-	basedir string
+type FSHandler struct {
+	Basedir string
 }
 
-func (h *fsHandler) accept(r *http.Request) bool {
+func (h *FSHandler) accept(r *http.Request) bool {
 	return true
 }
 
-func (h *fsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *FSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	code, err := h.serve(w, r)
 	log.Printf("%s %s - %d - %v", r.Method, r.URL.Path, code, err)
 }
 
-func (h *fsHandler) serve(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *FSHandler) serve(w http.ResponseWriter, r *http.Request) (int, error) {
 	switch r.Method {
 	case http.MethodOptions:
 		return h.serveOption(w, r)
@@ -51,9 +51,9 @@ func (h *fsHandler) serve(w http.ResponseWriter, r *http.Request) (int, error) {
 	}
 }
 
-func (h *fsHandler) join(path ...string) string {
+func (h *FSHandler) join(path ...string) string {
 	e := make([]string, len(path)+1)
-	e = append(e, h.basedir)
+	e = append(e, h.Basedir)
 	e = append(e, path...)
 	return filepath.Join(e...)
 }
@@ -77,7 +77,7 @@ func (fi fileInfo) MarshalJSON() ([]byte, error) {
 	return json.Marshal(tmp)
 }
 
-func (h *fsHandler) serveGet(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *FSHandler) serveGet(w http.ResponseWriter, r *http.Request) (int, error) {
 	target := r.URL.Path
 	file, info, err := h.stat(target)
 	if err != nil {
@@ -97,7 +97,7 @@ func (h *fsHandler) serveGet(w http.ResponseWriter, r *http.Request) (int, error
 	return http.StatusOK, nil
 }
 
-func (h *fsHandler) readDir(target string) ([]fileInfo, error) {
+func (h *FSHandler) readDir(target string) ([]fileInfo, error) {
 	entries, err := os.ReadDir(h.join(target))
 	if err != nil {
 		return nil, err
@@ -119,8 +119,8 @@ func (h *fsHandler) readDir(target string) ([]fileInfo, error) {
 	return infos, nil
 }
 
-func (h *fsHandler) stat(target string) (io.ReadSeeker, fs.FileInfo, error) {
-	f, err := http.FS(os.DirFS(h.basedir)).Open(path.Clean(target))
+func (h *FSHandler) stat(target string) (io.ReadSeeker, fs.FileInfo, error) {
+	f, err := http.FS(os.DirFS(h.Basedir)).Open(path.Clean(target))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -132,7 +132,7 @@ func (h *fsHandler) stat(target string) (io.ReadSeeker, fs.FileInfo, error) {
 	return f, stat, nil
 }
 
-func (h *fsHandler) serveCreate(w http.ResponseWriter, r *http.Request, override bool) (int, error) {
+func (h *FSHandler) serveCreate(w http.ResponseWriter, r *http.Request, override bool) (int, error) {
 	urlPath := r.URL.Path
 
 	var target string
@@ -191,10 +191,10 @@ func (h *fsHandler) serveCreate(w http.ResponseWriter, r *http.Request, override
 	return http.StatusCreated, nil
 }
 
-func (h *fsHandler) serveOption(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *FSHandler) serveOption(w http.ResponseWriter, r *http.Request) (int, error) {
 	return http.StatusNotImplemented, errors.New("not implemented")
 }
 
-func (h *fsHandler) serveDelete(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *FSHandler) serveDelete(w http.ResponseWriter, r *http.Request) (int, error) {
 	return http.StatusNotImplemented, errors.New("not implemented")
 }
