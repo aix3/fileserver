@@ -5,6 +5,7 @@ import '@fontsource/roboto/400.css';
 import {Container} from "@mui/material";
 import FileList from "./components/FileList"
 import {FileInfo} from "./components/FileListTable";
+import ScrollTop from "./components/ScrollToTop";
 
 interface InitialData {
     files: FileInfo[]
@@ -24,6 +25,7 @@ function App() {
     return (
         <Container maxWidth="lg" sx={{marginTop: '20px', marginBottom: '20px'}}>
             <FileList files={files} currentPath={currentPath}/>
+            <ScrollTop/>
         </Container>
     )
 }

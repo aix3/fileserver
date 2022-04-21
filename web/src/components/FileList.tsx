@@ -4,7 +4,7 @@ import AddIcon from '@mui/icons-material/Add';
 
 import {useState} from "react";
 import Breadcrumb from "./Breadcrumb";
-import UploaderDialog from "./UploaderDialog";
+import UploadDialog from "./UploadDialog";
 import FileListTable, {FileInfo} from "./FileListTable";
 
 export interface FileListProp {
@@ -28,7 +28,7 @@ function FileList(props: FileListProp) {
                     <AddIcon/>
                     Upload
                 </Fab>
-                <UploaderDialog
+                <UploadDialog
                     open={dialogOpen}
                     onClose={() => setDialogOpen(false)}
                     onSuccess={handleUploadSuccess}
