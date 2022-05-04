@@ -71,8 +71,8 @@ func (fi fileInfo) MarshalJSON() ([]byte, error) {
 		alias
 		ModTime string `json:"mod_time"`
 	}{
-		alias: (alias)(fi),
-		ModTime:  fi.ModTime.Format(time.RFC3339),
+		alias:   (alias)(fi),
+		ModTime: fi.ModTime.Format(time.RFC3339),
 	}
 	return json.Marshal(tmp)
 }

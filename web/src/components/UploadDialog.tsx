@@ -19,9 +19,9 @@ export default function UploadDialog(props: UploaderDialogProps) {
     const [files, setFiles] = useState<File[]>([])
     const [uploading, setUploading] = useState<boolean>(false)
 
-    const handleFileChange = useCallback((files: File[]) => {
+    const handleFileChange = (files: File[]) => {
         setFiles(files)
-    }, [])
+    }
 
     const handleFileAdd = (newFiles: File[]) => {
         setFiles(files.concat(newFiles))
@@ -80,6 +80,7 @@ export default function UploadDialog(props: UploaderDialogProps) {
             doUpload(i, files[i])
         }
     }
+    console.log(files)
     return (
         <Dialog
             open={props.open}

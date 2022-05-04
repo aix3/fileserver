@@ -28,11 +28,13 @@ function FileList(props: FileListProp) {
                     <AddIcon/>
                     Upload
                 </Fab>
-                <UploadDialog
-                    open={dialogOpen}
-                    onClose={() => setDialogOpen(false)}
-                    onSuccess={handleUploadSuccess}
-                />
+                {dialogOpen &&
+                    <UploadDialog
+                        open={dialogOpen}
+                        onClose={() => setDialogOpen(false)}
+                        onSuccess={handleUploadSuccess}
+                    />
+                }
             </Stack>
             <FileListTable files={props.files}/>
         </Stack>

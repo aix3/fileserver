@@ -13,7 +13,6 @@ type config struct {
 	basedir  string
 	certFile string
 	keyFile  string
-	uiPath   string
 }
 
 var defaultConfig = config{
@@ -21,7 +20,6 @@ var defaultConfig = config{
 	basedir:  ".",
 	certFile: "",
 	keyFile:  "",
-	uiPath:   "",
 }
 
 func init() {
@@ -29,8 +27,6 @@ func init() {
 	flag.StringVar(&defaultConfig.basedir, "basedir", defaultConfig.basedir, "which directory to serve on")
 	flag.StringVar(&defaultConfig.certFile, "tls-cert", defaultConfig.certFile, "TLS cert file location")
 	flag.StringVar(&defaultConfig.keyFile, "tls-key", defaultConfig.keyFile, "TLS key file location")
-
-	flag.StringVar(&defaultConfig.uiPath, "ui-path", defaultConfig.uiPath, "UI deploy path")
 }
 
 func main() {

@@ -51,7 +51,6 @@ func Test_fsHandler_serveGetFile_Head(t *testing.T) {
 	t.Logf("get file code %d", code)
 }
 
-
 func Test_fsHandler_serveCreateFile(t *testing.T) {
 	h := FSHandler{
 		Basedir: "testdata",

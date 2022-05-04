@@ -5,10 +5,10 @@ import (
 )
 
 type compHandler struct {
-	handlers []handler
+	handlers []Handler
 }
 
-func NewCompHandler(handlers ...handler) handler {
+func NewCompHandler(handlers ...Handler) Handler {
 	return &compHandler{
 		handlers: handlers,
 	}
@@ -27,7 +27,7 @@ func (h *compHandler) accept(r *http.Request) bool {
 	return true
 }
 
-func (h *compHandler) find(r *http.Request) handler {
+func (h *compHandler) find(r *http.Request) Handler {
 	for _, handler := range h.handlers {
 		if handler.accept(r) {
 			return handler
