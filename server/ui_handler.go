@@ -3,7 +3,6 @@ package server
 import (
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	"github.com/aix3/fileserver/web"
 	"net/http"
 	"sort"
@@ -19,9 +18,6 @@ func init() {
 	asset = http.FileServer(http.FS(dist))
 
 	index = template.Must(template.ParseFS(dist, "index.html"))
-	for _, t := range index.Templates() {
-		fmt.Println(t.Name())
-	}
 }
 
 type UIHandler struct {
