@@ -28,14 +28,10 @@ The `fileserver` can be used as a static file server to share your file to peopl
 
 ### Web UI
 **Index**
-<div style="border: solid 1px">
-<img src="img/index.png" alt="Index"/>
-</div>
+> ![Index](img/index.png)
 
 **Upload**
-<div style="border: solid 1px">
-<img src="img/upload.png" alt="Upload"/>
-</div>
+> ![Upload](img/upload.png)
 
 ## Build
 ```bash
