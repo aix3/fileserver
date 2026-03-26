@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/aix3/fileserver/server"
 	"net/http"
 	"runtime/debug"
+
+	"github.com/aix3/fileserver/server"
 )
 
 type config struct {
@@ -13,6 +14,8 @@ type config struct {
 	basedir  string
 	certFile string
 	keyFile  string
+	username string
+	password string
 }
 
 var defaultConfig = config{
@@ -20,6 +23,8 @@ var defaultConfig = config{
 	basedir:  ".",
 	certFile: "",
 	keyFile:  "",
+	username: "",
+	password: "",
 }
 
 func init() {
@@ -27,6 +32,8 @@ func init() {
 	flag.StringVar(&defaultConfig.basedir, "basedir", defaultConfig.basedir, "which directory to serve on")
 	flag.StringVar(&defaultConfig.certFile, "tls-cert", defaultConfig.certFile, "TLS cert file location")
 	flag.StringVar(&defaultConfig.keyFile, "tls-key", defaultConfig.keyFile, "TLS key file location")
+	flag.StringVar(&defaultConfig.username, "user", defaultConfig.username, "basic auth username")
+	flag.StringVar(&defaultConfig.password, "pass", defaultConfig.password, "basic auth password")
 }
 
 func main() {
@@ -41,7 +48,12 @@ func main() {
 		Fs: fs,
 	}
 
-	mux.Handle("/", server.NewCompHandler(ui, fs))
+	handler := &server.BasicAuthHandler{
+		Username: defaultConfig.username,
+		Password: defaultConfig.password,
+		Next:     server.NewCompHandler(ui, fs),
+	}
+	mux.Handle("/", handler)
 
 	addr := fmt.Sprintf(":%d", defaultConfig.port)
 

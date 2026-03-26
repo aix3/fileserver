@@ -43,6 +43,9 @@ func (h *FSHandler) serve(w http.ResponseWriter, r *http.Request) (int, error) {
 	case http.MethodDelete:
 		return h.serveDelete(w, r)
 	case http.MethodPost:
+		if r.URL.Query().Get("action") == "mkdir" {
+			return h.serveMkdir(w, r)
+		}
 		return h.serveCreate(w, r, true)
 	case http.MethodPut:
 		return h.serveCreate(w, r, true)
@@ -187,6 +190,27 @@ func (h *FSHandler) serveCreate(w http.ResponseWriter, r *http.Request, override
 	if _, err := io.Copy(dst, file); err != nil {
 		return http.StatusInternalServerError, err
 	}
+	w.WriteHeader(http.StatusCreated)
+	return http.StatusCreated, nil
+}
+
+func (h *FSHandler) serveMkdir(w http.ResponseWriter, r *http.Request) (int, error) {
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		return http.StatusBadRequest, fmt.Errorf("missing 'name' query parameter")
+	}
+
+	target := path.Join(r.URL.Path, name)
+	targetAbs := h.join(target)
+
+	if _, err := os.Stat(targetAbs); err == nil {
+		return http.StatusConflict, fmt.Errorf("%q already exists", target)
+	}
+
+	if err := os.MkdirAll(targetAbs, os.ModePerm); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	return http.StatusCreated, nil
 }
