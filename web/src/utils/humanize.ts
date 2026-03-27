@@ -26,3 +26,21 @@ export function humanFileSize(bytes: number, si = false, dp = 1) {
     } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
     return bytes.toFixed(dp) + ' ' + units[u];
 }
+
+/** Pretty-print ISO/mod_time strings for the file list. */
+export function formatModTime(iso: string): string {
+    if (!iso || !iso.trim()) {
+        return '—';
+    }
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) {
+        return iso;
+    }
+    return d.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}

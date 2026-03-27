@@ -7,6 +7,7 @@ The `fileserver` can be used as a static file server to share your file and also
 - File download
 - File upload (batch upload supported)
 - Directory creation
+- File/directory deletion (opt-in via `-allow-delete`)
 - HTTPS supported
 - Basic Auth
 - Web UI
@@ -20,14 +21,20 @@ The `fileserver` can be used as a static file server to share your file and also
 # Basic usage
 ./fileserver -port 8880 -basedir /path/to/files
 
-# With basic auth
-./fileserver -port 8880 -basedir /path/to/files -user admin -pass secret
+# With Basic Auth (default: only uploads / mkdir / delete need credentials; browsing is public)
+./fileserver -port 8880 -basedir /path/to/files -auth "admin:secret"
+
+# Require Basic Auth for every request (including reads)
+./fileserver -port 8880 -basedir /path/to/files -auth "admin:secret" -auth-scope all
 
 # With TLS
 ./fileserver -port 8443 -basedir /path/to/files -tls-cert cert.pem -tls-key key.pem
 
-# With TLS and basic auth
-./fileserver -port 8443 -basedir /path/to/files -tls-cert cert.pem -tls-key key.pem -user admin -pass secret
+# With TLS and Basic Auth
+./fileserver -port 8443 -basedir /path/to/files -tls-cert cert.pem -tls-key key.pem -auth "admin:secret"
+
+# Enable deletion
+./fileserver -port 8880 -basedir /path/to/files -allow-delete
 ```
 
 #### Flags
@@ -38,14 +45,13 @@ The `fileserver` can be used as a static file server to share your file and also
 | `-basedir` | `.`     | Which directory to serve     |
 | `-tls-cert`| `""`    | TLS cert file location       |
 | `-tls-key` | `""`    | TLS key file location        |
-| `-user`    | `""`    | Basic auth username          |
-| `-pass`    | `""`    | Basic auth password          |
-
-> When `-user` and `-pass` are both set, all requests (WebUI and API) require HTTP Basic Authentication.
+| `-auth`    | `""`    | Basic auth as `username:password` (password may contain `:`). Empty disables Basic auth |
+| `-auth-scope` | `write` | With `-auth`: `write` = only POST/PUT/PATCH/DELETE need auth; `all` = every request needs auth |
+| `-allow-delete` | `false` | Enable file/directory deletion |
 
 ### API usage
 
-When basic auth is enabled, add `-u user:pass` to all curl commands.
+When Basic Auth is enabled, add `-u user:pass` to curl for requests that require credentials. With the default `-auth-scope write`, **GET/HEAD** (download, JSON listing) are usually anonymous; **POST** (upload, mkdir), **PUT**, and **DELETE** need `-u`. With `-auth-scope all`, add `-u` to every request.
 
 **File upload - Using default file name**
 
@@ -55,7 +61,7 @@ Following command will upload the `img.png` to the directory `/image/a/b/c/` on 
  $ # or
  $ curl -F 'file=@img.png' http://localhost:8880/image/a/b/c/
 
- # With basic auth
+ # With Basic Auth (upload is a write)
  $ curl -u admin:secret -T img.png http://localhost:8880/image/a/b/c/
  ```
 
@@ -76,7 +82,7 @@ Following command will upload the `img.png` to the directory `/image/a/b/c/` on 
 ```bash
 $ curl -X POST 'http://localhost:8880/path/to/?action=mkdir&name=new-folder'
 
-# With basic auth
+# With Basic Auth
 $ curl -u admin:secret -X POST 'http://localhost:8880/path/to/?action=mkdir&name=new-folder'
 ```
 
@@ -84,16 +90,25 @@ $ curl -u admin:secret -X POST 'http://localhost:8880/path/to/?action=mkdir&name
 ```bash
 $ curl http://localhost:8880/image/a/b/c/another.png
 
-# With basic auth
-$ curl -u admin:secret http://localhost:8880/image/a/b/c/another.png
+# Only needed if `-auth-scope all`; with default `write`, download is anonymous
+$ curl http://localhost:8880/image/a/b/c/another.png
+```
+
+**Delete file or directory** (requires `-allow-delete`; with Basic Auth, DELETE is a write — add `-u` when `-auth` is set)
+```bash
+# Delete a file
+$ curl -u admin:secret -X DELETE http://localhost:8880/path/to/file.txt
+
+# Delete a directory (recursively)
+$ curl -u admin:secret -X DELETE http://localhost:8880/path/to/dir/
 ```
 
 **List directory (JSON)**
 ```bash
 $ curl http://localhost:8880/path/to/dir/
 
-# With basic auth
-$ curl -u admin:secret http://localhost:8880/path/to/dir/
+# Only needed if `-auth-scope all`; with default `write`, JSON listing is anonymous
+$ curl http://localhost:8880/path/to/dir/
 ```
 
 ### UI usage

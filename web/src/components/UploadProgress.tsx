@@ -1,39 +1,45 @@
-import CircularProgress, {CircularProgressProps,} from '@mui/material/CircularProgress';
+import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
 
-export default function UploadProgress(
-    props: CircularProgressProps & { valueFn: () => number },
-) {
+interface UploadProgressProps {
+    value: number // 0-100 for progress, -1 for error
+}
+
+export default function UploadProgress(props: UploadProgressProps) {
+    const {value} = props
+
+    if (value === -1) {
+        return <ErrorIcon color="error" sx={{fontSize: '1.5rem'}}/>
+    }
+
+    if (value >= 100) {
+        return <CheckCircleIcon color="success" sx={{fontSize: '1.5rem'}}/>
+    }
+
     return (
         <Box sx={{position: 'relative', display: 'inline-flex'}}>
             <CircularProgress
                 variant="determinate"
-                size={"1.5rem"}
-                value={props.valueFn()}
-                {...props}
+                size="1.5rem"
+                value={value}
             />
             <Typography
                 sx={{
-                    right: 5,
                     position: 'absolute',
+                    inset: 0,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    lineHeight: '1'
                 }}
-                width={"1.5rem"}
-                height={"1.5rem"}
                 variant="caption"
                 color="text.secondary"
                 component="div"
             >
-                {props.valueFn() == 100 ?
-                    <CheckCircleIcon color="success"/>
-                    : `${Math.round(props.valueFn())}`
-                }
+                {Math.round(value)}
             </Typography>
         </Box>
-    );
+    )
 }

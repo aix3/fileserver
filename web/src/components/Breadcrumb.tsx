@@ -1,66 +1,145 @@
+import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Link from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
-
-class Breadcrumb {
-    name: string;
-    url: string;
-
-    constructor(name: string, url: string) {
-        this.name = name
-        this.url = url
-    }
-}
+import useMediaQuery from "@mui/material/useMediaQuery";
+import {useTheme} from "@mui/material/styles";
+import {useMemo} from "react";
 
 export interface BreadcrumbProps {
     currentPath: string
 }
 
-export default function (props: BreadcrumbProps) {
-    let path = props.currentPath
+interface Crumb {
+    label: string
+    href: string
+}
 
-    let currentDir = function () {
-        while (path.endsWith("/")) {
-            path = path.substr(0, path.lastIndexOf("/"))
-        }
-        let segments = path.split("/");
-        if (segments.length > 0) {
-            return segments[segments.length - 1]
-        }
+/** Trim trailing slashes (same as original). Root `/` becomes `""`. */
+function trimPath(path: string): string {
+    let p = path || "/"
+    while (p.endsWith("/")) {
+        p = p.slice(0, p.lastIndexOf("/"))
+    }
+    return p
+}
+
+function buildCrumbs(pathTrimmed: string): Crumb[] {
+    const segments = pathTrimmed.split("/")
+
+    // Root (`/`): current is already shown as "Index" — do not add a second "Index" link
+    if (pathTrimmed === "") {
+        return []
+    }
+
+    let pathname = window.location.pathname
+    if (!pathname.endsWith("/")) {
+        pathname += "/"
+    }
+
+    const bs: Crumb[] = []
+    for (let i = segments.length - 2; i >= 1; i--) {
+        bs.push({
+            label: segments[i],
+            href: pathname.concat("../".repeat(segments.length - i - 1)),
+        })
+    }
+    bs.push({
+        label: "Index",
+        href: pathname.concat("../".repeat(segments.length - 1)),
+    })
+    return bs.reverse()
+}
+
+function currentDirName(pathTrimmed: string): string {
+    if (pathTrimmed === "" || pathTrimmed === "/") {
         return "Index"
     }
+    const segments = pathTrimmed.split("/")
+    const last = segments[segments.length - 1]
+    return last || "Index"
+}
 
-    let currentBreadcrumbs = function () {
-        while (path.endsWith("/")) {
-            path = path.substr(0, path.lastIndexOf("/"))
-        }
-        let segments = path.split("/");
+export default function Breadcrumb(props: BreadcrumbProps) {
+    const theme = useTheme()
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
-        let pathname = window.location.pathname;
-        if (!pathname.endsWith("/")) {
-            pathname += "/"
+    const {crumbs, currentLabel} = useMemo(() => {
+        const pathTrimmed = trimPath(props.currentPath)
+        return {
+            crumbs: buildCrumbs(pathTrimmed),
+            currentLabel: currentDirName(pathTrimmed),
         }
-
-        let bs = []
-        for (let i = segments.length - 2; i >= 1; i--) {
-            bs.push(new Breadcrumb(segments[i], pathname.concat("../".repeat(segments.length - i - 1))))
-        }
-        bs.push(new Breadcrumb("Index", pathname.concat("../".repeat(segments.length - 1))));
-        return bs.reverse()
-    }
+    }, [props.currentPath])
 
     return (
-        <Breadcrumbs>
-            {currentBreadcrumbs().map(value => {
-                return (
-                    <Link underline="hover" color="inherit" href={value.url}>
-                        {value.name}
+        <Box
+            sx={{
+                width: "100%",
+                maxWidth: "100%",
+                overflowX: "auto",
+                overflowY: "hidden",
+                WebkitOverflowScrolling: "touch",
+                pb: 0.5,
+                touchAction: "pan-x",
+            }}
+        >
+            <Breadcrumbs
+                maxItems={isMobile ? 4 : 12}
+                itemsBeforeCollapse={isMobile ? 1 : 2}
+                itemsAfterCollapse={isMobile ? 1 : 2}
+                sx={{
+                    /* One row: scroll horizontally instead of wrapping (wrapping caused overlap on WebKit) */
+                    flexWrap: "nowrap",
+                    alignItems: "center",
+                    "& .MuiBreadcrumbs-ol": {
+                        flexWrap: "nowrap",
+                        alignItems: "center",
+                    },
+                    /* Do not shrink crumbs — minWidth:0 + maxWidth was collapsing items on top of each other */
+                    "& .MuiBreadcrumbs-li": {
+                        flexShrink: 0,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        maxWidth: "none",
+                    },
+                    "& .MuiBreadcrumbs-separator": {
+                        flexShrink: 0,
+                    },
+                }}
+            >
+                {crumbs.map((c) => (
+                    <Link
+                        key={c.href}
+                        underline="hover"
+                        color="inherit"
+                        href={c.href}
+                        sx={{
+                            whiteSpace: "nowrap",
+                            display: "inline-block",
+                            maxWidth: isMobile ? "45vw" : "none",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            verticalAlign: "bottom",
+                        }}
+                    >
+                        {c.label}
                     </Link>
-                )
-            })}
-            <Typography color="text.primary">
-                {currentDir()}
-            </Typography>
-        </Breadcrumbs>
+                ))}
+                <Typography
+                    color="text.primary"
+                    component="span"
+                    sx={{
+                        whiteSpace: "nowrap",
+                        maxWidth: isMobile ? "45vw" : "none",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        fontWeight: 600,
+                    }}
+                >
+                    {currentLabel}
+                </Typography>
+            </Breadcrumbs>
+        </Box>
     )
 }

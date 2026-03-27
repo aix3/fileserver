@@ -1,5 +1,5 @@
 build-web:
-	@yarn && yarn build web
+	@yarn && yarn build
 
 build-server:
 	@go build -o ./tmp/fileserver .

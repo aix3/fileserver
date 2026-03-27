@@ -1,13 +1,19 @@
-import DropzoneAreaBase from "./DropzoneAreaBase";
+import DropzoneArea from "./DropzoneAreaBase";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import Stack from "@mui/material/Stack";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import LinearProgress from "@mui/material/LinearProgress";
+import Typography from "@mui/material/Typography";
+import Box from "@mui/material/Box";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import {useTheme} from "@mui/material/styles";
 import FilePreviewList from "./FilePreviewList";
-import React, {useCallback, useState} from "react";
-import axios from "axios";
+import {useState, useRef, useCallback} from "react";
+import axios, {CancelTokenSource} from "axios";
+import {humanFileSize} from "../utils/humanize";
 
 export interface UploaderDialogProps {
     open: boolean
@@ -15,122 +21,206 @@ export interface UploaderDialogProps {
     onSuccess: () => void
 }
 
+interface UploadState {
+    progress: Map<number, number>
+    uploading: boolean
+    done: boolean
+    successCount: number
+    errorCount: number
+}
+
 export default function UploadDialog(props: UploaderDialogProps) {
+    const theme = useTheme()
+    const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
     const [files, setFiles] = useState<File[]>([])
-    const [uploading, setUploading] = useState<boolean>(false)
+    const [state, setState] = useState<UploadState>({
+        progress: new Map(),
+        uploading: false,
+        done: false,
+        successCount: 0,
+        errorCount: 0,
+    })
+    const cancelTokens = useRef<CancelTokenSource[]>([])
 
-    const handleFileChange = (files: File[]) => {
-        setFiles(files)
-    }
-
-    const handleFileAdd = (newFiles: File[]) => {
-        setFiles(files.concat(newFiles))
-    }
-
-    const handleSubmit = () => {
-        setUploading(true)
-        uploadFiles(files)
-    }
-
-    const [progressMap, setProgressMap] = useState<Map<number, number>>(new Map())
-    const [_, setTrigger] = useState<number>(1)
-
-    let handleGetProgress = useCallback((key: number): number => {
-        return progressMap.get(key) || 0
+    const handleFileAdd = useCallback((newFiles: File[]) => {
+        setFiles(prev => [...prev, ...newFiles])
     }, [])
 
-    function doUpload(index: number, file: File) {
-        const data = new FormData();
-        data.append('file', file);
+    const handleFileRemove = useCallback((index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index))
+    }, [])
 
-        axios.request({
-            method: "post",
-            url: window.location.toString(),
-            data: data,
-            onUploadProgress: (p) => {
-                progressMap.set(index, (p.loaded / p.total) * 100)
-                setTrigger(t => t + 1)
+    const handleClearAll = () => {
+        setFiles([])
+    }
+
+    const updateProgress = (index: number, value: number) => {
+        setState(prev => {
+            const newProgress = new Map(prev.progress)
+            newProgress.set(index, value)
+
+            let successCount = 0
+            let errorCount = 0
+            newProgress.forEach(v => {
+                if (v >= 100) successCount++
+                if (v === -1) errorCount++
+            })
+
+            return {
+                ...prev,
+                progress: newProgress,
+                successCount,
+                errorCount,
+                done: (successCount + errorCount) === newProgress.size,
             }
-        }).then(data => {
-            console.log(index + " finish")
-            progressMap.set(index, 100)
-        }).catch(err => {
-            console.log(index + " error")
-            progressMap.set(index, -1)
         })
     }
 
-    const [closeDisabled, setCloseDisabled] = useState(true)
+    const doUpload = (index: number, file: File) => {
+        const data = new FormData()
+        data.append('file', file)
 
-    const uploadFiles = function (files: File[]) {
-        const interval = setInterval(() => {
-            let done = true
-            progressMap.forEach(value => {
-                done &&= (value == 100 || value == -1)
-            })
+        const source = axios.CancelToken.source()
+        cancelTokens.current[index] = source
 
-            if (done) {
-                clearInterval(interval)
-                setCloseDisabled(false)
+        axios.post(window.location.pathname, data, {
+            cancelToken: source.token,
+            onUploadProgress: (p) => {
+                if (p.total) {
+                    updateProgress(index, (p.loaded / p.total) * 100)
+                }
             }
-        }, 800)
-
-        for (let i = 0; i < files.length; i++) {
-            progressMap.set(i, 0)
-            doUpload(i, files[i])
-        }
+        }).then(() => {
+            updateProgress(index, 100)
+        }).catch(() => {
+            updateProgress(index, -1)
+        })
     }
-    console.log(files)
+
+    const handleSubmit = () => {
+        const initialProgress = new Map<number, number>()
+        files.forEach((_, i) => initialProgress.set(i, 0))
+
+        setState({
+            progress: initialProgress,
+            uploading: true,
+            done: false,
+            successCount: 0,
+            errorCount: 0,
+        })
+
+        files.forEach((file, i) => doUpload(i, file))
+    }
+
+    const handleClose = () => {
+        cancelTokens.current.forEach(source => source?.cancel())
+        props.onClose()
+    }
+
+    const totalSize = files.reduce((sum, f) => sum + f.size, 0)
+    const overallProgress = state.progress.size > 0
+        ? Array.from(state.progress.values()).reduce((sum, v) => sum + Math.max(v, 0), 0) / state.progress.size
+        : 0
+
     return (
         <Dialog
             open={props.open}
-            fullWidth={true}
+            fullWidth
+            maxWidth="sm"
+            fullScreen={fullScreen}
+            onClose={state.uploading ? undefined : handleClose}
+            PaperProps={{
+                sx: fullScreen
+                    ? {
+                        pt: 'max(12px, env(safe-area-inset-top))',
+                        pb: 'max(12px, env(safe-area-inset-bottom))',
+                    }
+                    : undefined,
+            }}
         >
-            <DialogTitle id="alert-dialog-title">
+            <DialogTitle sx={{ pb: 1 }}>
                 Upload files
             </DialogTitle>
-            <DialogContent>
-                <Stack spacing={1}>
-                    {uploading ?
-                        <>
-                            <FilePreviewList
-                                value={files}
-                                onChange={handleFileChange}
-                                getProgress={handleGetProgress}
-                                uploading={uploading}
+            <DialogContent
+                dividers={fullScreen}
+                sx={{px: {xs: 2, sm: 3}}}
+            >
+                <Stack spacing={2}>
+                    {!state.uploading && (
+                        <DropzoneArea onAdd={handleFileAdd}/>
+                    )}
+
+                    {files.length > 0 && (
+                        <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                            <Typography variant="body2" color="text.secondary">
+                                {files.length} file{files.length > 1 ? 's' : ''} ({humanFileSize(totalSize)})
+                            </Typography>
+                            {!state.uploading && (
+                                <Button size="small" onClick={handleClearAll}>Clear all</Button>
+                            )}
+                        </Box>
+                    )}
+
+                    {state.uploading && (
+                        <Box>
+                            <Box sx={{display: 'flex', justifyContent: 'space-between', mb: 0.5}}>
+                                <Typography variant="caption" color="text.secondary">
+                                    {state.done
+                                        ? `Done: ${state.successCount} succeeded, ${state.errorCount} failed`
+                                        : `Uploading... ${Math.round(overallProgress)}%`
+                                    }
+                                </Typography>
+                            </Box>
+                            <LinearProgress
+                                variant="determinate"
+                                value={overallProgress}
+                                color={state.done && state.errorCount > 0 ? 'warning' : 'primary'}
                             />
-                        </>
-                        :
-                        <>
-                            <DropzoneAreaBase
-                                fileObjects={[]}
-                                showPreviews={true}
-                                filesLimit={1000}
-                                maxFileSize={9999999999}
-                                onAdd={handleFileAdd}
-                            />
-                            <FilePreviewList
-                                value={files}
-                                onChange={handleFileChange}
-                                getProgress={handleGetProgress}
-                                uploading={uploading}
-                            />
-                        </>
-                    }
+                        </Box>
+                    )}
+
+                    <FilePreviewList
+                        files={files}
+                        progress={state.progress}
+                        uploading={state.uploading}
+                        onRemove={handleFileRemove}
+                    />
                 </Stack>
             </DialogContent>
-            <DialogActions>
-                {uploading ?
+            <DialogActions
+                sx={{
+                    px: {xs: 2, sm: 3},
+                    pb: {xs: 'max(16px, env(safe-area-inset-bottom))', sm: 2},
+                    pt: 2,
+                    flexDirection: {xs: 'column-reverse', sm: 'row'},
+                    gap: 1,
+                    flexWrap: 'wrap',
+                    '& .MuiButton-root': {
+                        marginLeft: '0 !important',
+                    },
+                }}
+            >
+                {state.uploading ? (
+                    <Button fullWidth={fullScreen} onClick={props.onSuccess} disabled={!state.done} size="large">
+                        Close
+                    </Button>
+                ) : (
                     <>
-                        <Button onClick={props.onSuccess} disabled={closeDisabled}>CLOSE</Button>
+                        <Button fullWidth={fullScreen} onClick={handleClose} size="large">
+                            Cancel
+                        </Button>
+                        <Button
+                            fullWidth={fullScreen}
+                            variant="contained"
+                            disabled={files.length === 0}
+                            onClick={handleSubmit}
+                            size="large"
+                        >
+                            Upload{files.length > 0 ? ` (${files.length})` : ''}
+                        </Button>
                     </>
-                    :
-                    <>
-                        <Button onClick={props.onClose}>CANCEL</Button>
-                        <Button disabled={files.length == 0} onClick={handleSubmit}>SUBMIT</Button>
-                    </>
-                }
+                )}
             </DialogActions>
         </Dialog>
-    );
+    )
 }

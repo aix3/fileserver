@@ -23,9 +23,14 @@ function ScrollTop() {
             <Box
                 onClick={handleClick}
                 role="presentation"
-                sx={{position: 'fixed', bottom: 16, right: 16}}
+                sx={{
+                    position: 'fixed',
+                    zIndex: (theme) => theme.zIndex.fab,
+                    bottom: 'max(16px, calc(16px + env(safe-area-inset-bottom, 0px)))',
+                    right: 'max(16px, calc(16px + env(safe-area-inset-right, 0px)))',
+                }}
             >
-                <Fab color="primary" size="small" aria-label="scroll back to top">
+                <Fab color="primary" size="medium" aria-label="scroll back to top">
                     <KeyboardArrowUpIcon/>
                 </Fab>
             </Box>

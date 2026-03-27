@@ -1,72 +1,71 @@
-import Box, {BoxProps} from "@mui/material/Box";
-import Chip from "@mui/material/Chip";
-import {useMemo} from "react";
+import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
+import Typography from "@mui/material/Typography";
 import UploadProgress from "./UploadProgress";
+import {humanFileSize} from "../utils/humanize";
+import ClearIcon from "@mui/icons-material/Clear";
 
 export interface FilePreviewListProps {
-    value: File[];
-    getProgress: (key: number) => number
-    onChange: (files: File[]) => void
+    files: File[]
+    progress: Map<number, number>
     uploading: boolean
+    onRemove: (index: number) => void
 }
 
-function FilePreviewList(props: FilePreviewListProps) {
-    const {
-        value,
-        getProgress,
-        onChange,
-        uploading
-    } = props;
+export default function FilePreviewList(props: FilePreviewListProps) {
+    const {files, progress, uploading, onRemove} = props
 
-    const sxGridContainer = useMemo<BoxProps["sx"]>(
-        () => ({
-            display: "flex",
-            flexWrap: "wrap",
-            width: "100%",
-            gap: 1,
-        }),
-        []
-    );
-
-    type chipProp = { file: File, index: number }
-
-    const ProgressChip = ({file, index}: chipProp) => {
-        const createUpdateProgressHandler = (key: number) => () => {
-            return getProgress(key)
-        }
-
-        return <Chip
-            variant="outlined"
-            label={file.name}
-            onDelete={() => {
-                let _ = null
-            }}
-            deleteIcon={<UploadProgress valueFn={createUpdateProgressHandler(index)}/>}
-        />;
-    }
-
-    const DeleteChip = ({file, index}: chipProp) => {
-        const createDeleteHandler = (index: number) => () => {
-            onChange(value.filter((_, i) => i !== index))
-        }
-        return <Chip
-            variant="outlined"
-            label={file.name}
-            onDelete={createDeleteHandler(index)}
-        />;
+    if (files.length === 0) {
+        return (
+            <Box sx={{py: 2, textAlign: 'center'}}>
+                <Typography variant="body2" color="text.secondary">
+                    No files selected
+                </Typography>
+            </Box>
+        )
     }
 
     return (
-        <Box sx={sxGridContainer}>
-            {value.map((file, i) => {
-                return (
-                    <Box key={i}>
-                        {uploading ? <ProgressChip file={file} index={i}/> : <DeleteChip file={file} index={i}/>}
-                    </Box>
-                );
-            })}
-        </Box>
-    );
+        <List
+            dense
+            sx={{
+                maxHeight: {xs: 'min(42vh, 260px)', sm: 300},
+                overflow: 'auto',
+                WebkitOverflowScrolling: 'touch',
+            }}
+        >
+            {files.map((file, index) => (
+                <ListItem
+                    key={`${file.name}-${index}`}
+                    secondaryAction={
+                        uploading ? (
+                            <UploadProgress value={progress.get(index) ?? 0}/>
+                        ) : (
+                            <IconButton edge="end" size="small" onClick={() => onRemove(index)}>
+                                <ClearIcon fontSize="small"/>
+                            </IconButton>
+                        )
+                    }
+                    sx={{
+                        bgcolor: uploading && progress.get(index) === -1 ? 'error.50' : 'transparent',
+                        borderRadius: 1,
+                    }}
+                >
+                    <ListItemText
+                        primary={file.name}
+                        secondary={humanFileSize(file.size)}
+                        primaryTypographyProps={{
+                            noWrap: true,
+                            sx: {maxWidth: '80%'},
+                            variant: 'body2',
+                        }}
+                        secondaryTypographyProps={{variant: 'caption'}}
+                    />
+                </ListItem>
+            ))}
+        </List>
+    )
 }
-
-export default FilePreviewList;

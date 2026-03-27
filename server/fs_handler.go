@@ -20,7 +20,8 @@ const (
 )
 
 type FSHandler struct {
-	Basedir string
+	Basedir     string
+	AllowDelete bool
 }
 
 func (h *FSHandler) accept(r *http.Request) bool {
@@ -54,11 +55,22 @@ func (h *FSHandler) serve(w http.ResponseWriter, r *http.Request) (int, error) {
 	}
 }
 
-func (h *FSHandler) join(path ...string) string {
-	e := make([]string, len(path)+1)
-	e = append(e, h.Basedir)
-	e = append(e, path...)
-	return filepath.Join(e...)
+// openRoot returns an os.Root anchored at Basedir.
+// All file operations through os.Root are confined to Basedir,
+// preventing path traversal at the OS level (Go 1.24+).
+func (h *FSHandler) openRoot() (*os.Root, error) {
+	return os.OpenRoot(h.Basedir)
+}
+
+// toRelPath converts a URL path to a relative path safe for os.Root operations.
+// os.Root expects relative paths (no leading slash).
+func toRelPath(urlPath string) string {
+	p := path.Clean(urlPath)
+	p = strings.TrimPrefix(p, "/")
+	if p == "" {
+		p = "."
+	}
+	return p
 }
 
 type fileInfo struct {
@@ -101,7 +113,20 @@ func (h *FSHandler) serveGet(w http.ResponseWriter, r *http.Request) (int, error
 }
 
 func (h *FSHandler) readDir(target string) ([]fileInfo, error) {
-	entries, err := os.ReadDir(h.join(target))
+	root, err := h.openRoot()
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+
+	rel := toRelPath(target)
+	dir, err := root.Open(rel)
+	if err != nil {
+		return nil, err
+	}
+	defer dir.Close()
+
+	entries, err := dir.ReadDir(-1)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +148,14 @@ func (h *FSHandler) readDir(target string) ([]fileInfo, error) {
 }
 
 func (h *FSHandler) stat(target string) (io.ReadSeeker, fs.FileInfo, error) {
-	f, err := http.FS(os.DirFS(h.Basedir)).Open(path.Clean(target))
+	root, err := h.openRoot()
+	if err != nil {
+		return nil, nil, err
+	}
+	defer root.Close()
+
+	// root.FS() returns an fs.FS confined to the root directory.
+	f, err := http.FS(root.FS()).Open(path.Clean(target))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -148,40 +180,56 @@ func (h *FSHandler) serveCreate(w http.ResponseWriter, r *http.Request, override
 		target = urlPath
 		file = r.Body
 	} else {
-		mf, h, err := r.FormFile("file")
+		mf, fh, err := r.FormFile("file")
 		if err != nil {
 			return http.StatusBadRequest, err
 		}
+		// Sanitize uploaded filename: strip directory components to prevent
+		// crafted filenames like "../../etc/cron".
+		cleanName := filepath.Base(fh.Filename)
+		if cleanName == "." || cleanName == string(filepath.Separator) {
+			return http.StatusBadRequest, fmt.Errorf("invalid filename %q", fh.Filename)
+		}
 		if strings.HasSuffix(urlPath, "/") {
-			target = path.Join(urlPath, h.Filename)
+			target = path.Join(urlPath, cleanName)
 		} else {
 			target = urlPath
 		}
 		file = mf
 	}
 
-	targetAbs := h.join(target)
+	root, err := h.openRoot()
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	defer root.Close()
 
-	info, err := os.Stat(targetAbs)
+	rel := toRelPath(target)
+
+	info, err := root.Stat(rel)
 	if err == nil {
 		if info.IsDir() {
 			return http.StatusConflict, fmt.Errorf("%q is a existing directory", target)
 		}
 		if info.Size() > 0 {
 			if override {
-				_ = os.Remove(targetAbs)
+				_ = root.Remove(rel)
 			} else {
 				return http.StatusConflict, fmt.Errorf("%q already exist", target)
 			}
 		}
 	}
 
-	err = os.MkdirAll(path.Dir(targetAbs), os.ModePerm)
-	if err != nil {
-		return http.StatusInternalServerError, err
+	// Ensure parent directories exist.
+	// os.Root.MkdirAll is not available, so create parents via os.MkdirAll
+	// on the resolved path within the root. We use root.Mkdir for each segment.
+	if dir := path.Dir(rel); dir != "." {
+		if err := mkdirAllInRoot(root, dir); err != nil {
+			return http.StatusInternalServerError, err
+		}
 	}
 
-	dst, err := os.OpenFile(targetAbs, os.O_CREATE|os.O_RDWR, 0600)
+	dst, err := root.OpenFile(rel, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -194,20 +242,52 @@ func (h *FSHandler) serveCreate(w http.ResponseWriter, r *http.Request, override
 	return http.StatusCreated, nil
 }
 
+// mkdirAllInRoot creates all directories along the path within an os.Root.
+func mkdirAllInRoot(root *os.Root, dir string) error {
+	segments := strings.Split(path.Clean(dir), "/")
+	current := ""
+	for _, seg := range segments {
+		if seg == "" || seg == "." {
+			continue
+		}
+		if current == "" {
+			current = seg
+		} else {
+			current = current + "/" + seg
+		}
+		err := root.Mkdir(current, os.ModePerm)
+		if err != nil && !errors.Is(err, fs.ErrExist) {
+			return err
+		}
+	}
+	return nil
+}
+
 func (h *FSHandler) serveMkdir(w http.ResponseWriter, r *http.Request) (int, error) {
 	name := r.URL.Query().Get("name")
 	if name == "" {
 		return http.StatusBadRequest, fmt.Errorf("missing 'name' query parameter")
 	}
 
-	target := path.Join(r.URL.Path, name)
-	targetAbs := h.join(target)
-
-	if _, err := os.Stat(targetAbs); err == nil {
-		return http.StatusConflict, fmt.Errorf("%q already exists", target)
+	// Only allow simple directory names — reject path separators and traversal.
+	cleanName := filepath.Base(name)
+	if cleanName != name || cleanName == "." || cleanName == ".." {
+		return http.StatusBadRequest, fmt.Errorf("invalid directory name %q", name)
 	}
 
-	if err := os.MkdirAll(targetAbs, os.ModePerm); err != nil {
+	root, err := h.openRoot()
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	defer root.Close()
+
+	rel := toRelPath(path.Join(r.URL.Path, cleanName))
+
+	if _, err := root.Stat(rel); err == nil {
+		return http.StatusConflict, fmt.Errorf("%q already exists", rel)
+	}
+
+	if err := root.Mkdir(rel, os.ModePerm); err != nil {
 		return http.StatusInternalServerError, err
 	}
 
@@ -220,5 +300,63 @@ func (h *FSHandler) serveOption(w http.ResponseWriter, r *http.Request) (int, er
 }
 
 func (h *FSHandler) serveDelete(w http.ResponseWriter, r *http.Request) (int, error) {
-	return http.StatusNotImplemented, errors.New("not implemented")
+	if !h.AllowDelete {
+		return http.StatusForbidden, errors.New("delete is disabled")
+	}
+
+	root, err := h.openRoot()
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	defer root.Close()
+
+	rel := toRelPath(r.URL.Path)
+	if rel == "." {
+		return http.StatusBadRequest, errors.New("cannot delete root directory")
+	}
+
+	info, err := root.Stat(rel)
+	if err != nil {
+		return http.StatusNotFound, fmt.Errorf("%q not found", r.URL.Path)
+	}
+
+	if info.IsDir() {
+		if err := removeAllInRoot(root, rel); err != nil {
+			return http.StatusInternalServerError, err
+		}
+	} else {
+		if err := root.Remove(rel); err != nil {
+			return http.StatusInternalServerError, err
+		}
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return http.StatusNoContent, nil
+}
+
+// removeAllInRoot recursively removes a directory and its contents within an os.Root.
+func removeAllInRoot(root *os.Root, dir string) error {
+	f, err := root.Open(dir)
+	if err != nil {
+		return err
+	}
+	entries, err := f.ReadDir(-1)
+	f.Close()
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		child := dir + "/" + entry.Name()
+		if entry.IsDir() {
+			if err := removeAllInRoot(root, child); err != nil {
+				return err
+			}
+		} else {
+			if err := root.Remove(child); err != nil {
+				return err
+			}
+		}
+	}
+	return root.Remove(dir)
 }

@@ -16,7 +16,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
 
       - uses: actions/setup-node@v4
         with:
@@ -26,7 +26,7 @@ jobs:
         run: yarn install --registry https://registry.npmmirror.com
 
       - name: Build frontend
-        run: yarn build web
+        run: yarn build
 
       - name: Build binaries
         run: |
@@ -46,7 +46,7 @@ jobs:
           for target in "${targets[@]}"; do
             os="${target%/*}"
             arch="${target#*/}"
-            output="dist/fileserver-${VERSION}-${os}-${arch}"
+            output="dist/fileserver-${os}-${arch}"
             if [ "$os" = "windows" ]; then
               output="${output}.exe"
             fi

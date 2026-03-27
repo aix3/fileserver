@@ -38,8 +38,9 @@ func (h *UIHandler) accept(r *http.Request) bool {
 }
 
 type uiData struct {
-	Files []fileInfo `json:"files"`
-	Path  string     `json:"path"`
+	Files       []fileInfo `json:"files"`
+	Path        string     `json:"path"`
+	AllowDelete bool       `json:"allow_delete"`
 }
 
 func (h *UIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -82,8 +83,9 @@ func (h *UIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	data := uiData{
-		Files: infos,
-		Path:  r.URL.Path,
+		Files:       infos,
+		Path:        r.URL.Path,
+		AllowDelete: h.Fs.AllowDelete,
 	}
 
 	bytes, _ := json.Marshal(data)
