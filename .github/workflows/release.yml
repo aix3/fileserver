@@ -23,7 +23,7 @@ jobs:
           node-version: '20'
 
       - name: Install frontend dependencies
-        run: yarn install --registry https://registry.npmmirror.com
+        run: yarn install --frozen-lockfile
 
       - name: Build frontend
         run: yarn build
